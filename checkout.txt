@@ -1,0 +1,2 @@
+
+svn checkout http://subversion/departments/MODS/staff/sbeland/projects/SorceSim/trunk

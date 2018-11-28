@@ -1,0 +1,470 @@
+;
+
+; CALL GET_SIM_PARAMS AT THE START OF THE MAIN PROGRAM TO FILL THE COMMON BLOCK
+
+;  INCLUDE THE COMMON BLOCK in each procedure
+
+; INDEX 0:7, 8 PNTS IS FOR 8 SLITS SLITS
+
+; INDEX 0:1, 2 PNTS IS FOR SIMA AND SIMB
+
+; 9/5/02,  George Lawrence
+
+; 11/19/02  CHANGE SLIT STRUCTURE,  TWO SEPARATE PERISCOPE SLITS
+
+;
+
+PRO GET_SIM_PARAMS
+
+    ; usage:     GET_SIM_PARAMS
+
+    @'SIM_COMMON_DEF.PRO'
+
+    CLOSE,1  ; the logical unit to use
+
+    ; parameter file has been converted to tab-delineated (*.txt) FROM .XLS
+
+    ; FILE = 'C:\Users\harder\Documents\RSI\Prism_idl\Spectral IDL routines 1_14_03\SIM_NUMBERS.txt'
+
+    FILE = '/Users/sbeland/SORCE/code/Spectral_IDL/sim_numbers.txt'
+
+    OPENR,1,FILE
+
+    TITLE = ' '
+
+    STR = ' '
+
+
+
+    HEADER = STRARR(2)  ; A & B
+
+    BUFF = DBLARR(9)    ; local input buffer
+
+    NAMES = STRARR(8)
+
+    WAB_ALL = DBLARR(8,2)  ; SLIT WIDTH IN MICRONS
+
+    LAB_ALL = WAB_ALL      ; SLIT LENGTH IN MM
+
+    YAB_ALL = WAB_ALL      ; SLIT POSITION, MM, WRT INPUT SLIT
+
+    AAB_ALL = WAB_ALL      ; AREA OF EACH SLIT, MM^2
+
+    F_AB = DBLARR(2)       ; FOCAL LENGTH ENTRANCE SLIT TO PRISM ROT AXIS, MM
+
+    FREF_AB = DBLARR(2)    ; DISTANCE REF MIRR TO CCD, MM
+
+    CZ_AB = DBLARR(2)      ; CCD VALUE FOR THE ON-AXIS BEAM
+
+    GAMZ_AB = DBLARR(2)    ; GAMMA-ZERO IN RADIANS
+
+    C_TCN = DBLARR(6)      ; 5TH ORDER POLY COEFS FOR SILICA TEMP COEF OF INDEX, dN/dT
+
+    PIX_AB = DBLARR(2)     ; SUB PIXEL SPACING IN MM
+
+    THP_AB = DBLARR(2)     ; PRISM WEDGE ANGLE IN RADIANS
+
+    TREF_SILICA = 20.0D0   ; ZEMAX AND MALITSON SELLMEIER TEMPERATURE
+
+    KS1 = 0.6961663D0
+
+    LS1 = 4.679148D-3
+
+    KS2 = 4.079426D-1      ; THESE AND OTHER COMMON BLOCK NAMES ARE RESERVED !
+
+    LS2 = 1.351206D-2
+
+    KS3 = 8.974794D-1
+
+    LS3 = 9.7934D1            ; SELLMEIER COEFS:  IN COMMON BLOCK
+
+
+
+
+
+    ; try TSIS updated Sellmeier coefficients from Dave Harber's model (Aug 2013)
+
+    ;sellmeier_coeffs.K = [0.48248367d,  0.62264115d,   0.92035196d]
+
+    ;sellmeier_coeffs.L = [0.012898505d, 0.0041084074d, 100.90622d]
+
+    ;KS1 = 0.48248367d
+
+    ;LS1 = 0.012898505d
+
+    ;KS2 = 0.62264115d      ; THESE AND OTHER COMMON BLOCK NAMES ARE RESERVED !
+
+    ;LS2 = 0.0041084074d
+
+    ;KS3 = 0.92035196d
+
+    ;LS3 = 100.90622d            ; SELLMEIER COEFS:  IN COMMON BLOCK
+
+
+
+
+
+    X = 1.D0  ; FOR READING IN SINGLE VALUES, LOCAL VARIABLE
+
+
+
+    READF,1,TITLE  ; DUMP THE TITLE LINE
+
+    ;PRINT,TITLE
+
+    FOR JAB = 0,1 DO BEGIN
+
+        READF,1,TITLE
+
+        ;PRINT,TITLE
+
+        READF,1,STR
+
+        ;PRINT,1,STR
+
+        HEADER(JAB) = STR
+
+
+
+        FOR J = 0,7 DO BEGIN  ;
+
+            READF,1,BUFF,STR
+
+            WAB_ALL(J,JAB) = BUFF(3)  ; IN MM AS OF 12/11/02
+
+            LAB_ALL(J,JAB) = BUFF(5)
+
+            YAB_ALL(J,JAB) = BUFF(7)
+
+            AAB_ALL(J,JAB) = BUFF(1)
+
+            NAMES(J) = STR
+
+        ENDFOR  ; J LOOP
+
+
+
+        ;PRINT,BUFF,' ',NAMES(J)
+
+        ; READ THE REST OF THE STUFF
+
+        READF,1,X  ; F
+
+        F_AB(JAB) = X ; F
+
+        READF,1,X  ; FREF
+
+        FREF_AB(JAB) = X  ; FREF
+
+        READF,1,X  ; VERTICAL TILT ANGLE: DUMP IT.
+
+        READF,1,X  ; CZ
+
+        CZ_AB(JAB) = X  ; CZ
+
+        READF,1,X  ; DUMP REF MIRROR FOCAL LENGTH
+
+        READF,1,X  ; GAMMA ZERO IN DEGREES
+
+        GAMZ_AB(JAB) = X*!DPI/180.D0  ; STORE VALUE IN RADIANS
+
+        READF,1,X  ; PIX IN MM
+
+        PIX_AB(JAB) = X  ; STORE PIX IN MM
+
+        READF,1,X   ; PRISM WEDGE ANGLE IN DEGREES
+
+        THP_AB(JAB) = X*!DPI/180.D0  ; STORE PRISM WEDGE IN RADIANS
+
+        READF,1,STR  ; DUMP THE INCREASING/DECREASING MESSAGE
+
+    ENDFOR   ; JAB LOOP
+
+
+
+    ; READ THE SILICA TEMP COEFS
+
+    FOR L = 1,4 DO READF,1,STR  ; DUMP FOUR MORE LINES
+
+    READF,1,C_TCN  ; REMEMBER TO MULTIPLY BY 1.D-6
+
+
+
+    READF,1,STR  ; DUMP THE HEADER
+
+    RH_AB = DBLARR(2,2)
+
+    READF,1,RH_AB
+
+    TREFH_AB = DBLARR(2,2)
+
+    READF,1,TREFH_AB
+
+    TCRH_AB = DBLARR(2,2)
+
+    READF,1,TCRH_AB
+
+
+
+    READF,1,STR  ; DUMP THE NAME OF THE TEMPERATURE
+
+    RS_AB = DBLARR(2,2)
+
+    READF,1,RS_AB
+
+    TREFS_AB = DBLARR(2,2)
+
+    READF,1,TREFS_AB
+
+    TCRS_AB = DBLARR(2,2)
+
+    READF,1,TCRS_AB
+
+
+
+    READF,1,STR  ; DUMP THE NAME OF THE TEMPERATURE
+
+    V7_AB = DBLARR(2,2)
+
+    READF,1,V7_AB
+
+    V7TREF_AB = DBLARR(2,2)
+
+    READF,1,V7TREF_AB
+
+    V7_TCV_AB = DBLARR(2,2)
+
+    READF,1,V7_TCV_AB
+
+    RH_AB = TRANSPOSE(RH_AB)
+
+    RS_AB = TRANSPOSE(RS_AB)
+
+    TREFH_AB = TRANSPOSE(TREFH_AB)
+
+    TCRH_AB = TRANSPOSE(TCRH_AB)
+
+
+
+    TREFS_AB = TRANSPOSE(TREFS_AB)
+
+    TCRS_AB = TRANSPOSE(TCRS_AB)
+
+    V7_AB = TRANSPOSE(V7_AB)
+
+    V7TREF_AB = TRANSPOSE(V7TREF_AB)
+
+    V7_TCV_AB = TRANSPOSE(V7_TCV_AB)
+
+    READF,1,STR  ; SKIP THE NAME OF THE TEMP FOR V
+
+    M_FULL_SCALE = X   ; DOUBLE PRECISION
+
+    READF,1,M_FULL_SCALE  ; 64000, FULL SCALE PULSE WIDTH COUNTER
+
+    READF,1,dD_dV  ; ADC GAIN
+
+    READF,1,STR  ; DUMP THE R_FEED HEADER LINE FOR THE SIM_A DATA
+
+    R_FEED_ALL = DBLARR(8,2)  ; PHOTODIODE FEEDBACK RESISTORS, OHMS
+
+
+
+    FOR J = 0,7 DO BEGIN
+
+        READF,1,X
+
+        R_FEED_ALL(J,0) = X
+
+    ENDFOR
+
+
+
+    READF,1,STR  ; DUMP THE HEADER LINE FOR B
+
+    FOR J = 0,7 DO BEGIN
+
+        READF,1,X
+
+        R_FEED_ALL(J,1) = X
+
+    ENDFOR
+
+
+
+    STND_WATT_DIODES = R_FEED_ALL*dD_dV/M_FULL_SCALE
+
+
+
+    Y_HALF_PRISM = 12.5D0 ; PHYSICAL WIDTH OF THE PRISM, TYPE AS DOUBLE
+
+    READF,1,Y_HALF_PRISM  ;  --AS SEEN FROM THE ENTRANCE SLIT {12.5 MM}
+
+    A_DIFFR_W = X
+
+    A_DIFFR_L = X  ; TYPING
+
+    READF,1,A_DIFFR_W  ; SLIT  WIDTH DIFFRACTION COEF.  See table 1.6
+
+    READF,1,A_DIFFR_L  ; SLIT LENGTH DIFFRACTION COEF.  See table 1.6
+
+
+
+    READF,1,STR  ; DUMP HEADER FOR COMA COEFS
+
+    COMA = DBLARR(4)
+
+    READF,1,COMA   ; COMA C3 FORMULA COEFS
+
+
+
+    CLOSE,1  ; CLOSE THE DATA BASE TEXT FILE
+
+
+
+
+
+    ;OPENR,1,'C:\Users\harder\Documents\RSI\Prism_idl\Spectral IDL routines 1_14_03\MAGNIFY_COEFS.DAT'
+
+    OPENR,1,'/Users/sbeland/SORCE/code/Spectral_IDL/magnify_coefs.dat'
+
+    READF,1,NCOEFS,NSLITS
+
+    M_COEFS = DBLARR(NCOEFS,NSLITS)
+
+    READF,1,M_COEFS  ; 3X7 ARRAY, QUADRATIC FIT TO (N-1.46)
+
+    CLOSE,1  ; CLOSE THE MAGNIFY_COEFS FILE
+
+    ; CLEAN UP THE INITIAL TAB IN NAMES
+
+    FOR J = 0,7 DO NAMES(J) = STRMID(NAMES(J),1,STRLEN(NAMES(J))-1)
+
+
+
+    ;PRINT,'SIM PARAMETERS READ FROM '+FILE
+
+    ; CHECK CONSISTENCY OF W,L, AREA;    (Does not check:   7/02)
+
+    ;PPM = (WAB_ALL*LAB_ALL/AAB_ALL-1)*1.D6
+
+    ;PRINT,PPM
+
+
+
+    CLOSE,1
+
+    ;OPENR,1,'C:\Users\harder\Documents\RSI\Prism_idl\Spectral IDL routines 1_14_03\IR_RHO.DAT'   ; LOAD THE IR DIODE RESPONSIVITY TABLE
+
+    OPENR,1,'/Users/sbeland/SORCE/code/Spectral_IDL/ir_rho.dat'   ; LOAD THE IR DIODE RESPONSIVITY TABLE
+
+    READF,1,NRHO
+
+    LAM_IR = DBLARR(NRHO)
+
+    RHO_IR = LAM_IR
+
+    READF,1,LAM_IR
+
+    READF,1,RHO_IR
+
+    CLOSE,1
+
+    TCR_IR = 0.D0*LAM_IR   ; PLACEHOLDER UNTIL WE GET SOME DATA
+
+    TREF_IR = 20.D0   ; PLACEHOLDER
+
+
+
+    CLOSE,1
+
+    ;OPENR,1,'C:\Users\harder\Documents\RSI\Prism_idl\Spectral IDL routines 1_14_03\VIS_RHO.DAT'   ; LOAD THE VIS DIODE RESPONSIVITY TABLE
+
+    OPENR,1,'/Users/sbeland/SORCE/code/Spectral_IDL/vis_rho.dat'   ; LOAD THE VIS DIODE RESPONSIVITY TABLE
+
+    READF,1,NRHO
+
+    LAM_UVG = DBLARR(NRHO)
+
+    RHO_UVG = LAM_UVG
+
+    TCR_UVG = LAM_UVG  ; TEMP COEF, FRACTION PER DEG C
+
+    READF,1,LAM_UVG
+
+    READF,1,RHO_UVG
+
+    READF,1,TCR_UVG
+
+    READF,1,TREF_UVG
+
+
+
+    CLOSE,1
+
+
+
+    OPENR,1,'/Users/sbeland/SORCE/code/Spectral_IDL/alum_only.dat' 
+
+    ;OPENR,1,'C:\Users\harder\Documents\RSI\Prism_idl\Spectral IDL routines 1_14_03\ALUM_ONLY.DAT'
+
+    READF,1,NLAM_ALUM
+
+    LAM_ALUM_TBL = DBLARR(NLAM_ALUM)
+
+    TRAN_ALUM_TBL = DBLARR(NLAM_ALUM)
+
+    READF,1, LAM_ALUM_TBL   ; WAVELENGTHS OF THE TABLE
+
+    READF,1,TRAN_ALUM_TBL   ; TRANSMISSION OF ALUMINUM ONLY, MUST MULTIPLY BY FRESNEL
+
+    CLOSE,1
+
+
+
+END
+
+
+
+
+
+
+
+; **************   TEST  MAIN   **************
+
+
+
+;@'SIM_COMMON_DEF.PRO'
+
+;GET_SIM_PARAMS
+
+;PRINT,'RH'
+
+;PRINT,RH_AB
+
+;PRINT,'RS'
+
+;PRINT,RS_AB
+
+;PRINT,'TREF H'
+
+;PRINT,TREFH_AB
+
+;PRINT,'TREF S'
+
+;PRINT,TREFS_AB
+
+;PRINT,'TCR H'
+
+;PRINT,TCRH_AB
+
+;PRINT,'TCR S'
+
+;PRINT,TCRS_AB
+
+;PRINT,'TCV
+
+;PRINT,V7_TCV_AB
+
+;END
+

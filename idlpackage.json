@@ -1,0 +1,17 @@
+{
+  "Name": "tools_sbeland",
+  "Version": "0.0.1",
+  "Author": "StŽphane BŽland",
+  "Date": "Nov. 27, 2018",
+  "Dependencies": [
+    {
+      "Name": "IDL",
+      "Version": "^8.5"
+    },
+    {
+      "Name": "query_database",
+      "Version": ">2.12",
+      "URL": "https://spenton@bitbucket.lasp.colorado.edu/scm/sds/query_database.git"
+    }
+  ]
+}
